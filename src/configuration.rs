@@ -16,9 +16,18 @@ pub struct DatabaseSettings {
     pub database_name: String,
 }
 
+impl DatabaseSettings {
+    pub fn connection_string(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            &self.username, &self.password, &self.host, self.port, &self.database_name
+        )
+    }
+}
+
 pub fn get_configuration() -> Result<Settings, ConfigError> {
     let settings = Config::builder()
-        .add_source(File::new("configuration.yaml", FileFormat::Yaml))
+        .add_source(File::new("configuration.yml", FileFormat::Yaml))
         .build()?;
     settings.try_deserialize::<Settings>()
 }
