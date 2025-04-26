@@ -25,6 +25,7 @@ sqlx = { version = "~0.8", default-features = false, features = [
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
+env_logger = "~0.11"
 
 [dev-dependencies]
 reqwest = "0.12"
