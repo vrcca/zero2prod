@@ -32,6 +32,8 @@ tracing-log = "~0.2"
 secrecy = { version = "~0.10", features = ["serde"] }
 tracing-actix-web = "~0.7"
 serde-aux = "4"
+unicode-segmentation = "1"
 
 [dev-dependencies]
-reqwest = "0.12"
+claims = "~0.8"
+reqwest = "~0.12"
