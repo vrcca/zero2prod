@@ -1,2 +1,8 @@
+.env
+debug/
 target/
 build/
+tests/
+Dockerfile
+scripts/
+migrations/
