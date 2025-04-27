@@ -1,12 +1,17 @@
-# fly.toml app configuration file generated for zero2prod-ancient-star-5964 on 2025-04-27T12:11:41+02:00
+# fly.toml app configuration file generated for zero2prod on 2025-04-27T14:18:10+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'zero2prod-ancient-star-5964'
+app = 'zero2prod'
 primary_region = 'fra'
 
 [build]
+
+[env]
+APP_DATABASE__DATABASE_NAME = 'zero2prod'
+APP_DATABASE__HOST = 'zero2prod-db.flycast'
+APP_DATABASE__PORT = '5432'
 
 [http_service]
 internal_port = 8000

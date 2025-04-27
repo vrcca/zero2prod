@@ -5,4 +5,4 @@ build/
 tests/
 Dockerfile
 scripts/
-migrations/
+fly.toml

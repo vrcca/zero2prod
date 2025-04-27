@@ -31,6 +31,7 @@ tracing-bunyan-formatter = "~0.3"
 tracing-log = "~0.2"
 secrecy = { version = "~0.10", features = ["serde"] }
 tracing-actix-web = "~0.7"
+serde-aux = "4"
 
 [dev-dependencies]
 reqwest = "0.12"
