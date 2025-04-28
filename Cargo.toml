@@ -37,4 +37,8 @@ validator = "~0.20"
 
 [dev-dependencies]
 claims = "~0.8"
+fake = "4"
+quickcheck = "1"
+quickcheck_macros = "1"
+rand = "~0.9"
 reqwest = "~0.12"
