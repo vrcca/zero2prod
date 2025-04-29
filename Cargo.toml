@@ -34,6 +34,10 @@ tracing-actix-web = "~0.7"
 serde-aux = "4"
 unicode-segmentation = "1"
 validator = "~0.20"
+reqwest = { version = "~0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 
 [dev-dependencies]
 claims = "~0.8"
@@ -41,4 +45,6 @@ fake = "4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rand = "~0.9"
-reqwest = "~0.12"
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "macros"] }
+wiremock = "0.6"
