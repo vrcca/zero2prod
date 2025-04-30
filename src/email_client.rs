@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use reqwest::Client;
 use secrecy::{ExposeSecret, SecretString};
 
@@ -15,9 +17,11 @@ impl EmailClient {
         base_url: String,
         sender: SubscriberEmail,
         authorization_token: SecretString,
+        timeout: Duration,
     ) -> Self {
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
         Self {
-            http_client: Client::new(),
+            http_client,
             base_url,
             sender,
             authorization_token,
@@ -30,19 +34,6 @@ impl EmailClient {
         html_content: &str,
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
-        // curl "https://api.postmarkapp.com/email" \
-        // -X POST \
-        //   -H "Accept: application/json" \
-        //   -H "Content-Type: application/json" \
-        //   -H "X-Postmark-Server-Token: server token" \
-        //   -d '{
-        //   "From": "sender@example.com",
-        //   "To": "receiver@example.com",
-        //   "Subject": "Postmark test",
-        //   "TextBody": "Hello dear Postmark user.",
-        //   "HtmlBody": "<html><body><strong>Hello</strong> dear Postmark user.</body></html>",
-        //   "MessageStream": "outbound"
-        // }'
         let url = format!("{}/email", self.base_url);
         let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
@@ -78,6 +69,8 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use crate::{domain::SubscriberEmail, email_client::EmailClient};
     use claims::{assert_err, assert_ok};
     use fake::{
@@ -92,6 +85,28 @@ mod tests {
         Match, Mock, MockServer, Request, ResponseTemplate,
         matchers::{any, header, header_exists, method, path},
     };
+
+    fn subject() -> String {
+        Sentence(1..2).fake()
+    }
+
+    fn content() -> String {
+        Paragraph(1..10).fake()
+    }
+
+    fn email() -> SubscriberEmail {
+        SubscriberEmail::parse(SafeEmail().fake()).unwrap()
+    }
+
+    fn email_client(base_url: String) -> EmailClient {
+        let authorization_token = SecretString::from(Faker.fake::<String>());
+        EmailClient::new(
+            base_url,
+            email(),
+            authorization_token,
+            Duration::from_millis(200),
+        )
+    }
 
     struct SendEmailBodyMatcher;
     impl Match for SendEmailBodyMatcher {
@@ -114,12 +129,7 @@ mod tests {
     async fn send_email_sends_the_expected_request() {
         // Arrange
         let mock_server = MockServer::start().await;
-        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(
-            mock_server.uri(),
-            sender,
-            SecretString::from(Faker.fake::<String>()),
-        );
+        let email_client = email_client(mock_server.uri());
 
         Mock::given(header_exists("X-Postmark-Server-Token"))
             .and(header("Content-Type", "application/json"))
@@ -131,13 +141,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let subscriber_email = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject: String = Sentence(1..2).fake();
-        let content: String = Paragraph(1..10).fake();
-
         // Act
         let _ = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(email(), &subject(), &content(), &content())
             .await;
     }
 
@@ -145,16 +151,7 @@ mod tests {
     async fn send_email_succeeds_if_the_server_returns_200() {
         // Arrange
         let mock_server = MockServer::start().await;
-        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(
-            mock_server.uri(),
-            sender,
-            SecretString::from(Faker.fake::<String>()),
-        );
-
-        let subscriber_email = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject: String = Sentence(1..2).fake();
-        let content: String = Paragraph(1..10).fake();
+        let email_client = email_client(mock_server.uri());
 
         Mock::given(any())
             .respond_with(ResponseTemplate::new(200))
@@ -164,7 +161,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(email(), &subject(), &content(), &content())
             .await;
 
         // Assert
@@ -175,16 +172,7 @@ mod tests {
     async fn send_email_fails_if_the_server_returns_500() {
         // Arrange
         let mock_server = MockServer::start().await;
-        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(
-            mock_server.uri(),
-            sender,
-            SecretString::from(Faker.fake::<String>()),
-        );
-
-        let subscriber_email = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject: String = Sentence(1..2).fake();
-        let content: String = Paragraph(1..10).fake();
+        let email_client = email_client(mock_server.uri());
 
         Mock::given(any())
             .respond_with(ResponseTemplate::new(500))
@@ -194,7 +182,28 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
+        // Assert
+        assert_err!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_times_out_if_the_server_takes_too_long() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(180)))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
             .await;
 
         // Assert
