@@ -44,9 +44,7 @@ pub async fn subscribe(
     if insert_subscriber(&pg_pool, &new_subscriber).await.is_err() {
         return HttpResponse::InternalServerError();
     }
-    let content = "Welcome to our newsletter!";
-    if email_client
-        .send_email(new_subscriber.email, "Welcome!", content, content)
+    if send_welcome_email(&email_client, new_subscriber.email)
         .await
         .is_err()
     {
@@ -81,4 +79,18 @@ pub async fn insert_subscriber(
     })?;
 
     Ok(())
+}
+
+#[tracing::instrument(
+    name = "Sending welcome notification to new subscriber",
+    skip(email_client, new_subscriber_email)
+)]
+async fn send_welcome_email(
+    email_client: &EmailClient,
+    new_subscriber_email: SubscriberEmail,
+) -> Result<(), reqwest::Error> {
+    let content = "Welcome to our newsletter!";
+    email_client
+        .send_email(new_subscriber_email, "Welcome!", content, content)
+        .await
 }

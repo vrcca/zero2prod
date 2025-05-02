@@ -19,6 +19,7 @@ impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, Error> {
         let connection_pool = get_connection_pool(&configuration.database);
 
+        // Email Client
         let sender = configuration
             .email_client
             .sender()
@@ -31,9 +32,11 @@ impl Application {
             timeout,
         );
 
+        // Migrate the DB
         let migration = sqlx::migrate!().run(&connection_pool).await;
         tracing::info!("migrations result: {:?}", migration);
 
+        // Listen to port
         let address = format!(
             "{}:{}",
             configuration.application.host, configuration.application.port
