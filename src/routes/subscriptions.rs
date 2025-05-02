@@ -93,4 +93,9 @@ async fn send_welcome_email(
     email_client
         .send_email(new_subscriber_email, "Welcome!", content, content)
         .await
+        .map_err(|e| {
+            tracing::error!("Failed to send welcome message: {:?}", e);
+            e
+        })?;
+    Ok(())
 }
