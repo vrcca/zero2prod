@@ -44,7 +44,7 @@ pub async fn subscribe(
     if insert_subscriber(&pg_pool, &new_subscriber).await.is_err() {
         return HttpResponse::InternalServerError();
     }
-    if send_welcome_email(&email_client, new_subscriber.email)
+    if send_confirmation_email(&email_client, new_subscriber)
         .await
         .is_err()
     {
@@ -64,7 +64,7 @@ pub async fn insert_subscriber(
     sqlx::query!(
         r#"
         INSERT INTO subscriptions(id, email, name, subscribed_at, status)
-        VALUES ($1, $2, $3, $4, 'pending');
+        VALUES ($1, $2, $3, $4, 'pending_confirmation');
         "#,
         Uuid::new_v4(),
         new_subscriber.email.as_ref(),
@@ -83,15 +83,25 @@ pub async fn insert_subscriber(
 
 #[tracing::instrument(
     name = "Sending welcome notification to new subscriber",
-    skip(email_client, new_subscriber_email)
+    skip(email_client, new_subscriber)
 )]
-async fn send_welcome_email(
+async fn send_confirmation_email(
     email_client: &EmailClient,
-    new_subscriber_email: SubscriberEmail,
+    new_subscriber: NewSubscriber,
 ) -> Result<(), reqwest::Error> {
-    let content = "Welcome to our newsletter!";
+    let confirmation_link = "https://example.com/confirm";
+    let html_body = &format!(
+        "Welcome to our newsletter! <br /> \
+         Click <a href=\"{}\">here</a> to confirm your subscription.",
+        confirmation_link
+    );
+    let text_body = &format!(
+        "Welcome to our newsletter!\n \
+        Visit {} to confirm your subscription.",
+        confirmation_link
+    );
     email_client
-        .send_email(new_subscriber_email, "Welcome!", content, content)
+        .send_email(new_subscriber.email, "Welcome!", &html_body, &text_body)
         .await
         .map_err(|e| {
             tracing::error!("Failed to send welcome message: {:?}", e);
