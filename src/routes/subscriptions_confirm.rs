@@ -35,7 +35,9 @@ async fn fetch_subscriber_id_from_token(
     token: &String,
 ) -> Result<Option<Uuid>, sqlx::Error> {
     let record = sqlx::query!(
-        "DELETE FROM subscription_tokens WHERE subscription_token = $1 RETURNING subscriber_id;",
+        r#"DELETE FROM subscription_tokens 
+        WHERE subscription_token = $1 
+        RETURNING subscriber_id;"#,
         token
     )
     .fetch_optional(pool)
