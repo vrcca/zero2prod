@@ -1,10 +1,11 @@
-use std::time::Duration;
+use std::{sync::OnceLock, time::Duration};
 
 use config::{Config, ConfigError, File};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
+use tera::Tera;
 
 use crate::domain::SubscriberEmail;
 #[derive(Deserialize, Clone)]
@@ -121,4 +122,12 @@ impl EmailClientSettings {
     pub fn timeout(&self) -> Duration {
         Duration::from_millis(self.timeout_milliseconds)
     }
+}
+pub fn email_templates() -> &'static Tera {
+    static EMAIL_TEMPLATES: OnceLock<Tera> = OnceLock::new();
+    EMAIL_TEMPLATES.get_or_init(|| {
+        let mut tera = Tera::new("templates/**/*").expect("Unable to load email templates.");
+        tera.autoescape_on(vec![".html", ".sql"]);
+        tera
+    })
 }
