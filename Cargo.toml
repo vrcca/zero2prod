@@ -41,6 +41,8 @@ reqwest = { version = "~0.12", default-features = false, features = [
 ] }
 rand = { version = "~0.9", features = ["std_rng"] }
 tera = "1"
+thiserror = "2"
+anyhow = "1"
 
 [dev-dependencies]
 claims = "~0.8"
